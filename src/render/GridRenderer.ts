@@ -1,20 +1,68 @@
-import { Application, Container, Graphics, Text, TextStyle } from 'pixi.js'
-import type { IGame, IGrid, ICell } from '../model'
-import { GridEvent } from '../model'
+import {
+    Application,
+    Container,
+    Graphics,
+    Text,
+    TextStyle,
+    FederatedEvent
+} from 'pixi.js'
+import type { IGame, ICell } from '../model'
+import { GameInputEvent, GameInputEventEmitter } from './InputEventEmitter'
 
+
+class CellRenderer {
+    x: number
+    y: number
+    containter: Container
+    graphic: Graphics
+    text: Text
+    eventEmitter: GameInputEventEmitter
+
+    constructor(x: number, y: number, size: number) {
+        this.x = x
+        this.y = y
+
+        this.containter = new Container()
+        this.containter.eventMode = 'static'
+
+        this.eventEmitter = new GameInputEventEmitter(this.containter)
+
+        this.graphic = new Graphics()
+        this.text = new Text({
+            text: '',
+            style: new TextStyle({
+                fontSize: 14,
+                fontWeight: 'bold',
+                fontFamily: 'monospace'
+            })
+        })
+
+        this.graphic.x = x * size
+        this.graphic.y = y * size
+
+        this.containter.addChild(this.graphic)
+        this.containter.addChild(this.text)
+    }
+
+    on(event: GameInputEvent, cb: (event: FederatedEvent) => void) {
+        this.eventEmitter.on(event, cb)
+    }
+
+    off(event: GameInputEvent, cb: (event: FederatedEvent) => void) {
+        this.eventEmitter.off(event, cb)
+    }
+}
 
 export class GridRenderer {
     private app: Application | null = null
     private gridContainer: Container | null = null
-    private cellGraphics: Graphics[][] = []
-    private cellTexts: Text[][] = []
+    private cellRenderers: CellRenderer[][] = []
     private game: IGame
-    private grid: IGrid
     private isInitialized = false
-    
+
     private readonly CELL_SIZE = 24
     private readonly BORDER_WIDTH = 2
-    
+
     // Colors matching classic minesweeper
     private readonly COLORS = {
         BACKGROUND: 0xC0C0C0,
@@ -24,7 +72,7 @@ export class GridRenderer {
         BORDER_DARK: 0x808080,
         NUMBERS: [
             0x0000FF, // 1 - blue
-            0x008000, // 2 - green  
+            0x008000, // 2 - green
             0xFF0000, // 3 - red
             0x800080, // 4 - dark purple
             0x800000, // 5 - maroon
@@ -36,27 +84,31 @@ export class GridRenderer {
 
     private constructor(game: IGame) {
         this.game = game
-        this.grid = game.grid
     }
 
     private async initialize() {
         try {
             this.app = new Application()
-            
+
             await this.app.init({
-                width: this.grid.width * this.CELL_SIZE,
-                height: this.grid.height * this.CELL_SIZE,
+                width: this.game.width * this.CELL_SIZE,
+                height: this.game.height * this.CELL_SIZE,
                 backgroundColor: this.COLORS.BACKGROUND,
                 preference: 'webgl'
             })
-            
+
+            // Prevent browser context menu on canvas
+            this.app.canvas.addEventListener('contextmenu', (e) => {
+                e.preventDefault()
+            })
+
             this.gridContainer = new Container()
             this.app.stage.addChild(this.gridContainer)
-            
+
             this.initGrid()
-            this.setupEventListeners()
+            this.setupGridEventListeners()
             this.isInitialized = true
-            
+
         } catch (error) {
             console.error('Failed to initialize GridRenderer:', error)
             throw error
@@ -77,7 +129,15 @@ export class GridRenderer {
     }
 
     public destroy() {
+        if (!this.isInitialized) {
+            return
+        }
+        console.log('Destroying GridRenderer...')
+        console.trace()
         this.isInitialized = false
+
+        this.game.offCellsChange(this.handleCellStateChange)
+
         if (this.app) {
             try {
                 this.app.destroy(true, { children: true, texture: true })
@@ -87,50 +147,39 @@ export class GridRenderer {
             this.app = null
         }
         this.gridContainer = null
-        this.cellGraphics = []
-        this.cellTexts = []
+        this.cellRenderers = []
     }
 
     private initGrid() {
         if (!this.gridContainer) {
             return
         }
-        for (let y = 0; y < this.grid.height; y++) {
-            this.cellGraphics[y] = []
-            this.cellTexts[y] = []
-            
-            for (let x = 0; x < this.grid.width; x++) {
-                const cellGraphic = new Graphics()
-                const cellText = new Text({
-                    text: '',
-                    style: new TextStyle({
-                        fontSize: 14,
-                        fontWeight: 'bold',
-                        fontFamily: 'monospace'
-                    })
-                })
-                
-                cellGraphic.x = x * this.CELL_SIZE
-                cellGraphic.y = y * this.CELL_SIZE
-                
-                this.gridContainer.addChild(cellGraphic)
-                this.gridContainer.addChild(cellText)
-                
-                this.cellGraphics[y][x] = cellGraphic
-                this.cellTexts[y][x] = cellText
-                
-                this.renderCell(x, y)
+        for (let y = 0; y < this.game.height; y++) {
+            this.cellRenderers[y] = []
+
+            for (let x = 0; x < this.game.width; x++) {
+                const cellRenderer = new CellRenderer(x, y, this.CELL_SIZE)
+
+                this.setupInputEventListeners(cellRenderer)
+
+                // add to main container
+                this.gridContainer.addChild(cellRenderer.containter)
+
+                // add to renderer array
+                this.cellRenderers[y][x] = cellRenderer
+
+                const cell = this.game.getCell({ x, y })
+                this.renderCell(cell)
             }
         }
     }
 
-    private renderCell(x: number, y: number) {
-        const cell = this.grid.getCell({ x, y })
-        const graphic = this.cellGraphics[y][x]
-        const text = this.cellTexts[y][x]
-        
+    private renderCell(cell : ICell) {
+        const { x, y } = cell.pos
+        const { text, graphic } = this.cellRenderers[y][x]
+
         graphic.clear()
-        
+
         if (cell.isOpened) {
             this.drawOpenCell(graphic, cell)
             this.updateCellText(text, cell)
@@ -138,7 +187,7 @@ export class GridRenderer {
             this.drawClosedCell(graphic)
             text.text = cell.isFlagged ? '🚩' : ''
         }
-        
+
         // Position text in center of cell
         text.x = x * this.CELL_SIZE + this.CELL_SIZE / 2 - text.width / 2
         text.y = y * this.CELL_SIZE + this.CELL_SIZE / 2 - text.height / 2
@@ -148,14 +197,14 @@ export class GridRenderer {
         // Main cell background
         graphic.rect(0, 0, this.CELL_SIZE, this.CELL_SIZE)
         graphic.fill(this.COLORS.CLOSED_CELL)
-        
+
         // 3D raised border effect
         // Top and left light borders
         graphic.rect(0, 0, this.CELL_SIZE, this.BORDER_WIDTH)
         graphic.fill(this.COLORS.BORDER_LIGHT)
         graphic.rect(0, 0, this.BORDER_WIDTH, this.CELL_SIZE)
         graphic.fill(this.COLORS.BORDER_LIGHT)
-        
+
         // Bottom and right dark borders
         graphic.rect(0, this.CELL_SIZE - this.BORDER_WIDTH, this.CELL_SIZE, this.BORDER_WIDTH)
         graphic.fill(this.COLORS.BORDER_DARK)
@@ -167,13 +216,13 @@ export class GridRenderer {
         // Main cell background (sunken appearance)
         graphic.rect(0, 0, this.CELL_SIZE, this.CELL_SIZE)
         graphic.fill(this.COLORS.OPEN_CELL)
-        
+
         // Thin dark border for sunken effect
         graphic.rect(0, 0, this.CELL_SIZE, 1)
         graphic.fill(this.COLORS.BORDER_DARK)
         graphic.rect(0, 0, 1, this.CELL_SIZE)
         graphic.fill(this.COLORS.BORDER_DARK)
-        
+
         // Mine background (red if mine hit)
         if (cell.hasMine) {
             graphic.rect(2, 2, this.CELL_SIZE - 4, this.CELL_SIZE - 4)
@@ -193,11 +242,39 @@ export class GridRenderer {
         }
     }
 
-    private setupEventListeners() {
-        this.grid.on(GridEvent.CELL_STATE_CHANGE, (updatedCells: Set<ICell>) => {
-            for (const cell of updatedCells) {
-                this.renderCell(cell.pos.x, cell.pos.y)
-            }
+    private handleCellStateChange = (updatedCells: Set<ICell>) => {
+        console.log("grid cell state change listener: ", this)
+        if (!this.isInitialized) return
+        for (const cell of updatedCells) {
+            this.renderCell(cell)
+        }
+    }
+
+    private setupGridEventListeners() {
+        this.game.onCellsChange(this.handleCellStateChange)
+    }
+
+    private setupInputEventListeners(cellRenderer: CellRenderer) {
+        // TODO: move the logic of what events to call ideally to a separate
+        // place outside of GridRenderer
+
+        const { x, y } = cellRenderer
+        cellRenderer.on(GameInputEvent.OPEN, () => {
+            console.log("Open cell at: ", x, y)
+            this.game.openCell({ x, y })
+            console.log("Opened cell count: ", this.game.openedCellCount)
+        })
+
+        cellRenderer.on(GameInputEvent.REVEAL, () => {
+            console.log("Reveal cells around: ", x, y)
+            this.game.revealAdjacentCells({ x, y })
+            console.log("Opened cell count: ", this.game.openedCellCount)
+        })
+
+        cellRenderer.on(GameInputEvent.FLAG, () => {
+            console.log("Flag cell at: ", x, y)
+            this.game.flagCell({ x, y })
+            console.log("Flag count: ", this.game.flagCount)
         })
     }
 }

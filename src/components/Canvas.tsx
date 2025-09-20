@@ -15,17 +15,17 @@ export default function Canvas() {
 
     if (!containerRef.current) return
   
-    let cancelled = false   
+    let cancelled = false
 
     console.log('Creating GridRenderer...')
     GridRenderer.create(game)
       .then(renderer => {
-        console.log('GridRenderer created successfully')
+        console.log('GridRenderer created successfully', cancelled, renderer.canvas)
         if (!cancelled && renderer.canvas) {
           rendererRef.current = renderer
           containerRef.current!.appendChild(renderer.canvas)
           setError(null)
-        } else {
+        } else if (cancelled) {
           renderer.destroy()
         }
       })
@@ -37,7 +37,7 @@ export default function Canvas() {
       })
 
     return () => {
-      console.log('Canvas cleanup')
+      console.log('Canvas component unmounted. Cleaning up GridRenderer...')
       cancelled = true
       if (rendererRef.current) {
         const canvas = rendererRef.current.canvas

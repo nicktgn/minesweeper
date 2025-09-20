@@ -1,22 +1,20 @@
 import type { ICell, IGrid, Vector2, GridConfig } from '../model'
-import { GridEvent } from '../model'
+import { GameEvent } from '../model'
 
 class Grid implements IGrid {
     private _width: number
     private _height: number
     // ratio of mines to cells
-    private _mineRatio: number 
-    
+    private _mineRatio: number
+
     private _cells: ICell[][]
     private _numCells: number
     private _mineCount: number = 0
     private _flagCount: number = 0
     private _openedCellCount: number = 0
 
-    private _listeners: Record<GridEvent, Set<(updatedCells: Set<ICell>) => void>> = {
-        [GridEvent.CELL_STATE_CHANGE]: new Set(),
-    }
-    
+    private _cellStateListeners: Set<(updatedCells: Set<ICell>) => void> = new Set()
+
     constructor(gridConfig: GridConfig) {
         this._width = gridConfig.width
         this._height = gridConfig.height
@@ -53,17 +51,17 @@ class Grid implements IGrid {
 
     init(startPos: Vector2) {
         this.checkCellPosition(startPos)
-        
+
         this.placeMines(startPos)
         this.setAdjacentMineCounts()
     }
 
-    on(event: GridEvent, cb: (updatedCells: Set<ICell>) => void) {
-        this._listeners[event].add(cb)
+    onCellsChange(cb: (updatedCells: Set<ICell>) => void) {
+        this._cellStateListeners.add(cb)
     }
 
-    off(event: GridEvent, cb: (updatedCells: Set<ICell>) => void) {
-        this._listeners[event].delete(cb)
+    offCellsChange(cb: (updatedCells: Set<ICell>) => void) {
+        this._cellStateListeners.delete(cb)
     }
 
     getCell(pos: Vector2) {
@@ -72,14 +70,14 @@ class Grid implements IGrid {
     }
 
     openCell(pos: Vector2) {
-        this.checkCellPosition(pos)
+        const cell = this.getCell(pos)
 
         // core logic is in this method
         const updatedCells = new Set<ICell>()
-        this.openCellByRef(this.getCell(pos), updatedCells)
+        this.openCellsByRef([cell], updatedCells)
 
         if (updatedCells.size) {
-            this.emit(GridEvent.CELL_STATE_CHANGE, updatedCells)
+            this.emit(updatedCells)
         }
     }
 
@@ -93,53 +91,79 @@ class Grid implements IGrid {
         cell.isFlagged = true
         this._flagCount++
 
-        this.emit(GridEvent.CELL_STATE_CHANGE, new Set([cell]))
+        this.emit(new Set([cell]))
     }
 
-    // to be called externally when doing chording - https://minesweeper.fandom.com/wiki/Chording
+    // chording - https://minesweeper.fandom.com/wiki/Chording
     revealAdjacentCells(pos: Vector2) {
-        this.checkCellPosition(pos)
+        const cell = this.getCell(pos)
+
+        // if no number on cell, no chording
+        if (cell.adjacentMines == 0) {
+            return
+        }
+        // if not open, just redirect to open cell call, no chording
+        if (!cell.isOpened) {
+            return this.openCell(pos)
+        }
+
         const updatedCells = new Set<ICell>()
-        this.revealAdjacentCellsIntl(pos, updatedCells)
+
+        // TODO: consider if order of opening cells matters
+        const cellStack = Array.from(this.adjacentCells(pos.x, pos.y))
+        this.openCellsByRef(cellStack, updatedCells)
+
+        if (updatedCells.size) {
+            this.emit(updatedCells)
+        }
     }
 
     // ---------------------------- private ------------------------ //
 
-    private emit(event: GridEvent, updatedCells: Set<ICell>) {
-        for (const cb of this._listeners[event]) {
+    private emit(updatedCells: Set<ICell>) {
+        for (const cb of this._cellStateListeners) {
             cb(updatedCells)
         }
     }
 
-    private openCellByRef(cell: ICell, updatedCells: Set<ICell>) {
-        // don't open it if correctly flagged
-        if (cell.hasMine && cell.isFlagged) {
-            return
-        }
+    private openCellsByRef(cellStack: ICell[], updatedCells: Set<ICell>) {
+        while(cellStack.length) {
+            const cell = cellStack.pop() as ICell
 
-        // in all other cases add to updated cells and we open it
-        updatedCells.add(cell)
-        this._openedCellCount++
-        cell.isOpened = true
+            const opened = this.openSingleCellByRef(cell)
+            if (!opened) {
+                continue
+            }
 
-        // this is GAME OVER
-        if (cell.hasMine) {
-            return
-        }
+            updatedCells.add(cell)
+            this._openedCellCount++
 
-        // if cell has no adjacent mines, reveal adjacent cells
-        if (cell.adjacentMines === 0) {
-            this.revealAdjacentCellsIntl(cell.pos, updatedCells)
+            // this is GAME OVER, no need to continue
+            if (cell.hasMine) {
+                return
+            }
+
+            // if cell has no adjacent mines, reveal adjacent cells
+            if (cell.adjacentMines === 0) {
+                for (const adjacentCell of this.adjacentCells(cell.pos.x, cell.pos.y)) {
+                    cellStack.push(adjacentCell)
+                }
+            }
         }
     }
 
     /**
-     * Will add all updated cells to the provided set (if provided)
+     * @returns true if cell was opened
      */
-    private revealAdjacentCellsIntl(pos: Vector2, updatedCells: Set<ICell>) {
-        for (const cell of this.adjacentCells(pos.x, pos.y)) {
-            this.openCellByRef(cell, updatedCells)
+    private openSingleCellByRef(cell: ICell): boolean {
+        // don't open it if correctly flagged or already opened
+        if (cell.isOpened || (cell.hasMine && cell.isFlagged)) {
+            return false
         }
+
+        // in all other cases add to updated cells and we open it
+        cell.isOpened = true
+        return true
     }
 
     private checkCellPosition(pos: Vector2) {
@@ -200,7 +224,7 @@ class Grid implements IGrid {
         }
     }
 
-} 
+}
 
 class Cell implements ICell {
     hasMine: boolean
