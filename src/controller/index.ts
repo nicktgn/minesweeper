@@ -2,7 +2,7 @@ import type { GameConfig, ICell, IGame } from '../model'
 import { GameState, GridEvent, GameEvent } from '../model'
 import Grid from './Grid'
 
-export class GameController implements IGame {
+class GameController implements IGame {
     private _gameState: GameState = GameState.NOT_STARTED
     private _grid: Grid
     private _listeners: Record<GameEvent, Set<(state: GameState) => void>> = {
@@ -64,3 +64,5 @@ export class GameController implements IGame {
         this.emit(GameEvent.GAME_STATE_CHANGE, state)
     }
 }
+
+export default GameController
