@@ -1,10 +1,11 @@
-import { EventEmitter, FederatedEvent, FederatedMouseEvent, FederatedPointerEvent } from 'pixi.js'
+import { EventEmitter, FederatedEvent } from 'pixi.js'
 import { debounce } from '../utils'
 
 export enum GameInputEvent {
+    PRESS = 'press',
     OPEN = 'open',
     FLAG = 'flag',
-    REVEAL = 'reveal',
+    CHORDING = 'chording',
 }
 
 export class GameInputEventEmitter {
@@ -23,7 +24,7 @@ export class GameInputEventEmitter {
         const numPresses = this.numPresses
         this.numPresses = 0
         if (numPresses > 1) {
-            this.eventEmitter.emit(GameInputEvent.REVEAL, event)
+            this.eventEmitter.emit(GameInputEvent.CHORDING, event)
         } else {
             this.eventEmitter.emit(GameInputEvent.OPEN, event)
         }
@@ -50,12 +51,13 @@ export class GameInputEventEmitter {
 
     private handleMouseDown(event: FederatedEvent) {
         this.isPressed = true
+        this.eventEmitter.emit(GameInputEvent.PRESS, event)
     }
 
     private handlePointerDown(event: FederatedEvent) {
         this.isPressed = true
-        
-        // Start long press timer but only for the touch event; 
+
+        // Start long press timer but only for the touch event;
         // otherwise right click is used for FLAG
         this.pressTimer = window.setTimeout(() => {
             if (this.isPressed) {
@@ -63,17 +65,18 @@ export class GameInputEventEmitter {
                 this.longPressFired = true
             }
         }, this.LONG_PRESS_DURATION)
+
+        this.eventEmitter.emit(GameInputEvent.PRESS, event)
     }
 
     private handleRightClick(event: FederatedEvent) {
-        console.log("Right click")
         event.preventDefault()
         this.eventEmitter.emit(GameInputEvent.FLAG, event)
     }
 
     private handlePointerUp(event: FederatedEvent) {
         if (!this.isPressed) return
-        
+
         this.numPresses++
         this.isPressed = false
 
@@ -106,8 +109,8 @@ export class GameInputEventEmitter {
             case GameInputEvent.FLAG:
                 this.eventEmitter.on(GameInputEvent.FLAG, cb)
                 break
-            case GameInputEvent.REVEAL:
-                this.eventEmitter.on(GameInputEvent.REVEAL, cb)
+            case GameInputEvent.CHORDING:
+                this.eventEmitter.on(GameInputEvent.CHORDING, cb)
                 break
         }
     }
@@ -120,8 +123,8 @@ export class GameInputEventEmitter {
             case GameInputEvent.FLAG:
                 this.eventEmitter.off(GameInputEvent.FLAG, cb)
                 break
-            case GameInputEvent.REVEAL:
-                this.eventEmitter.off(GameInputEvent.REVEAL, cb)
+            case GameInputEvent.CHORDING:
+                this.eventEmitter.off(GameInputEvent.CHORDING, cb)
                 break
         }
     }
@@ -133,5 +136,5 @@ export class GameInputEventEmitter {
         this.baseEmitter.removeAllListeners()
         this.eventEmitter.removeAllListeners()
     }
-    
+
 }

@@ -1,4 +1,4 @@
-import type { GameConfig, ICell, IGame, Vector2 } from '../model'
+import type { FailState, GameConfig, ICell, IGame, Vector2 } from '../model'
 import { GameState } from '../model'
 import Grid from './Grid'
 
@@ -15,8 +15,6 @@ export class GameController implements IGame {
 
     constructor(gameConfig: GameConfig) {
         this._grid = new Grid(gameConfig.grid)
-
-        this._grid.onCellsChange(this.updateGameState)
     }
 
     get gameState() {
@@ -27,6 +25,10 @@ export class GameController implements IGame {
     }
     get time() {
         return this._time
+    }
+    get isGameEnd() {
+        return this._gameState === GameState.LOST
+            || this._gameState === GameState.WON
     }
 
     get width() {
@@ -60,36 +62,47 @@ export class GameController implements IGame {
         this._grid.init(startPos)
         this.startTimer()
         this.changeGameState(GameState.IN_PROGRESS)
+        this._grid.onCellsChange(this.handleCellChange)
     }
 
-    stop() {
+    reset() {
         this.stopTimer()
-        this._grid.offCellsChange(this.updateGameState)
+        this._grid.offCellsChange(this.handleCellChange)
+        this._grid.reset()
+        this.changeGameState(GameState.NOT_STARTED)
     }
 
     getCell(pos: Vector2): ICell {
         return this._grid.getCell(pos)
     }
 
-    openCell(pos: Vector2): void {
+    openCell(pos: Vector2): boolean {
         if (this._gameState === GameState.NOT_STARTED) {
             this.init(pos)
         }
         return this._grid.openCell(pos)
     }
 
-    flagCell(pos: Vector2): void {
+    flagCell(pos: Vector2): boolean {
         if (this._gameState === GameState.NOT_STARTED) {
             this.init(pos)
         }
         return this._grid.flagCell(pos)
     }
 
-    revealAdjacentCells(pos: Vector2): void {
+    revealAdjacentCells(pos: Vector2): boolean {
         if (this._gameState === GameState.NOT_STARTED) {
             this.init(pos)
         }
         return this._grid.revealAdjacentCells(pos)
+    }
+
+    pressPreview(pos: Vector2): Vector2[] {
+        return this._grid.pressPreview(pos)
+    }
+
+    checkAllMinesFlagged() {
+        return this._grid.checkAllMinesFlagged()
     }
 
     onStateChange(cb: (state: GameState) => void) {
@@ -98,8 +111,14 @@ export class GameController implements IGame {
     onTick(cb: (time: number) => void) {
         this._tickListeners.add(cb)
     }
+    onProgress(cb: (flagCount: number) => void) {
+        this._grid.onProgress(cb)
+    }
     onCellsChange(cb: (updatedCells: Set<ICell>) => void) {
         this._grid.onCellsChange(cb)
+    }
+    onFailedState(cb: (failState: FailState) => void) {
+        this._grid.onFailedState(cb)
     }
     offStateChange(cb: (state: GameState) => void) {
         this._stateListeners.delete(cb)
@@ -109,6 +128,12 @@ export class GameController implements IGame {
     }
     offCellsChange(cb: (updatedCells: Set<ICell>) => void) {
         this._grid.offCellsChange(cb)
+    }
+    offProgress(cb: (flagCount: number) => void) {
+        this._grid.offProgress(cb)
+    }
+    offFailedState(cb: (failState: FailState) => void) {
+        this._grid.offFailedState(cb)
     }
 
     // ---------------------------- private ------------------------ //
@@ -125,19 +150,27 @@ export class GameController implements IGame {
         }
     }
 
-    private updateGameState = (updatedCells: Set<ICell>) => {
+    // this is handle of win and fail state
+    private handleCellChange = (updatedCells: Set<ICell>) => {
+        // check for fail condition
         for (const cell of updatedCells) {
             if (cell.hasMine && cell.isOpened) {
                 this.changeGameState(GameState.LOST)
-                return
-            }
-
-            // TODO: come back to this
-            if (this._grid.cellCount - this._grid.mineCount === this._grid.openedCellCount) {
-                this.changeGameState(GameState.WON)
+                this.stopTimer()
                 return
             }
         }
+        // check win condition
+        if (this.checkWinCondition()) {
+            this.changeGameState(GameState.WON)
+            this.stopTimer()
+        }
+    }
+
+    private checkWinCondition() {
+        const { cellCount, mineCount, openedCellCount } = this._grid
+        return cellCount - mineCount === openedCellCount &&
+            this._grid.checkAllMinesFlagged()
     }
 
     private changeGameState(state: GameState) {

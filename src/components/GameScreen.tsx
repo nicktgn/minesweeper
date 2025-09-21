@@ -1,50 +1,20 @@
 
-import { useEffect } from 'react'
-import { useAtomValue } from 'jotai'
-
-import GameController from '../controller'
 import { GameProvider } from '../context/GameContext'
 import Canvas from '../components/Canvas'
-import { DifficultyMap, GameState } from '../model'
-import { difficultyLevelAtom } from '../atoms/globalAtom'
-
+import GameUI from '../components/GameUI'
 
 const GameScreen = () => {
-  const difficultyLevel = useAtomValue(difficultyLevelAtom)
-  const difficultyConfig = DifficultyMap[difficultyLevel].config
-  const game = new GameController(difficultyConfig)
-
-  const handleGameStateChange = (state: GameState) => {
-    console.log('Game state changed:', state)
-  }
-
-  const handleGameTimerTick = (time: number) => {
-    console.log('Game timer tick:', time)
-  }
-
-  useEffect(() => {
-    console.log('Game screen mounted')
-
-    // set up game listeners
-    if (game) {
-      game.onStateChange(handleGameStateChange)
-      game.onTick(handleGameTimerTick)
-    }
-
-    return () => {
-      if (game) {
-        game.offStateChange(handleGameStateChange)
-        game.offTick(handleGameTimerTick)
-        game.stop()
-      }
-    }
-  }, [game])
+  const debugCanvas = import.meta.env.VITE_DEBUG_GRID === 'true'
 
   return (
     <>
-      <GameProvider game={game}>
-        <div className='grid-container'>
-          <Canvas />
+      <GameProvider>
+        <div className='flex max-w-[520px] flex-col justify-center items-center'>
+          <div className="flex flex-col w-full justify-center">
+            <GameUI />
+            <Canvas />
+            {debugCanvas && <Canvas forceOpenAllCells nonInteractive />}
+          </div>
         </div>
       </GameProvider>
     </>

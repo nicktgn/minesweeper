@@ -7,15 +7,15 @@ export enum GameState {
     LOST,
 }
 
-export enum GameEvent {
-    GAME_STATE_CHANGE,
-    GAME_TIMER_TICK,
-    CELL_STATE_CHANGE
-}
-
 export type Vector2 = {
     x: number
     y: number
+}
+
+export type FailState = {
+    triggeredMine: ICell
+    mineCells: ICell[]
+    wrongFlagCells: ICell[]
 }
 
 export interface ICell {
@@ -24,6 +24,8 @@ export interface ICell {
     isFlagged: boolean
     adjacentMines: number
     pos: Vector2
+
+    is(cell: ICell): boolean
 }
 
 export interface IGrid {
@@ -34,21 +36,36 @@ export interface IGrid {
     mineRatio: number
     flagCount: number
     openedCellCount: number
+
     init(startPos: Vector2): void
+    reset(): void
     getCell(pos: Vector2): ICell
-    openCell(pos: Vector2): void
-    flagCell(pos: Vector2): void
-    revealAdjacentCells(pos: Vector2): void
+    openCell(pos: Vector2): boolean
+    flagCell(pos: Vector2): boolean
+    revealAdjacentCells(pos: Vector2): boolean
+    /**
+     * returns the list of cells that would be opened if pressed
+     * both when opening closed cells and when chording cells around
+     */
+    pressPreview(pos: Vector2): Vector2[]
+    checkAllMinesFlagged(): boolean
+
     onCellsChange(cb: (updatedCells: Set<ICell>) => void): void
+    onProgress(cb: (flagCount: number) => void): void
+    onFailedState(cb: (failState: FailState) => void): void
     offCellsChange(cb: (updatedCells: Set<ICell>) => void): void
+    offProgress(cb: (flagCount: number) => void): void
+    offFailedState(cb: (failState: FailState) => void): void
 }
 
 export interface IGame extends IGrid {
     grid: IGrid
     gameState: GameState
     time: number
+    isGameEnd: boolean
+
     init(startPos: Vector2): void
-    stop(): void
+    reset(): void
 
     onStateChange(cb: (state: GameState) => void): void
     onTick(cb: (time: number) => void): void

@@ -3,4 +3,4 @@ import { DifficultyLevel } from '../model'
 
 export const difficultyLevelAtom = atom(DifficultyLevel.BEGINNER)
 
-export const screenAtom = atom('main')
+export const screenAtom = atom('game')

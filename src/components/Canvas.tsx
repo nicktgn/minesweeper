@@ -3,24 +3,42 @@ import { useEffect, useRef, useState } from 'react'
 import { useGameContext } from '../context/GameContext'
 import { GridRenderer } from '../render/GridRenderer'
 
-export default function Canvas() {
+type CanvasProps = {
+  forceOpenAllCells?: boolean
+  nonInteractive?: boolean
+}
+
+export default function Canvas({
+  forceOpenAllCells = false,
+  nonInteractive = false
+}: CanvasProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const rendererRef = useRef<GridRenderer | null>(null)
   const [error, setError] = useState<string | null>(null)
   const game = useGameContext()
 
-  useEffect(() => {
-    console.log('Game context:', game)
-    console.log('Grid dimensions:', game.grid.width, 'x', game.grid.height)
+  const destroyRenderer = () => {
+    if (rendererRef.current) {
+      const canvas = rendererRef.current.canvas
+      if (canvas && containerRef.current?.contains(canvas)) {
+        containerRef.current.removeChild(canvas)
+      }
+      rendererRef.current.destroy()
+      rendererRef.current = null
+    }
+  }
 
+  useEffect(() => {
     if (!containerRef.current) return
-  
+
+    if (rendererRef.current) {
+      rendererRef.current.destroy()
+    }
+
     let cancelled = false
 
-    console.log('Creating GridRenderer...')
-    GridRenderer.create(game)
+    GridRenderer.create(game, { forceOpenAllCells, nonInteractive })
       .then(renderer => {
-        console.log('GridRenderer created successfully', cancelled, renderer.canvas)
         if (!cancelled && renderer.canvas) {
           rendererRef.current = renderer
           containerRef.current!.appendChild(renderer.canvas)
@@ -37,16 +55,8 @@ export default function Canvas() {
       })
 
     return () => {
-      console.log('Canvas component unmounted. Cleaning up GridRenderer...')
       cancelled = true
-      if (rendererRef.current) {
-        const canvas = rendererRef.current.canvas
-        if (canvas && containerRef.current?.contains(canvas)) {
-          containerRef.current.removeChild(canvas)
-        }
-        rendererRef.current.destroy()
-        rendererRef.current = null
-      }
+      destroyRenderer()
     }
   }, [game])
 
@@ -54,6 +64,13 @@ export default function Canvas() {
     return <div className="error">Error: {error}</div>
   }
 
-  return <div ref={containerRef} style={{ border: '1px solid black' }} />
+  return (
+    <div className={`
+      border-t-0 border-2 rounded-lg rounded-t-none p-2
+      bg-[#4f5962] border-[#2b333a]
+    `}>
+      <div ref={containerRef} className='flex justify-center items-center' />
+    </div>
+  )
 }
 
