@@ -1,6 +1,6 @@
 # Minesweeper
 
-A Minesweeper game built with React, TypeScript, and Vite. Deployable to Cloudflare Workers.
+A Minesweeper game built with React, Pixi.js and Vite. Deployable to Cloudflare Workers.
 
 <img src="./src/assets/screenshot.png" alt="drawing" width="300"/>
 
@@ -38,6 +38,13 @@ For visual testing/debugging purposes, you can set the `VITE_DEBUG_GRID` environ
 - UI displays remaining flags to set and elapsed time (in seconds)
 - Smiley button resets the game; face changes based on game state
 
+## Architecture
+
+<img src="./docs/storyboard.png" alt="Storyboard"/>
+
+<img src="./docs/architecture.png" alt="Component Architecture"/>
+
+<img src="./docs/event_flow.png" alt="Event Flow"/>
 
 ## TODO:
 - [x] Basic game logic
@@ -45,6 +52,7 @@ For visual testing/debugging purposes, you can set the `VITE_DEBUG_GRID` environ
 - [x] Menu screen with difficulty selection
 - [x] Deploy to Cloudflare Workers
 - [x] Mouse and touch input
+- [ ] (Bug) Fix press preview visualization (on mouse down) for single cell and for chording
 - [ ] Better test coverage
 - [ ] Add CI/CD pipeline
 - [ ] Add e2e tests

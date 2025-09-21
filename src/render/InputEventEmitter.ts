@@ -51,6 +51,7 @@ export class GameInputEventEmitter {
 
     private handleMouseDown(event: FederatedEvent) {
         this.isPressed = true
+        console.log("MOUSE DOWN")
         this.eventEmitter.emit(GameInputEvent.PRESS, event)
     }
 
@@ -112,6 +113,10 @@ export class GameInputEventEmitter {
             case GameInputEvent.CHORDING:
                 this.eventEmitter.on(GameInputEvent.CHORDING, cb)
                 break
+            // TODO: fix press visualization
+            // case GameInputEvent.PRESS:
+            //     this.eventEmitter.on(GameInputEvent.PRESS, cb)
+            //     break
         }
     }
 
@@ -126,6 +131,10 @@ export class GameInputEventEmitter {
             case GameInputEvent.CHORDING:
                 this.eventEmitter.off(GameInputEvent.CHORDING, cb)
                 break
+            // TODO: fix press visualization
+            // case GameInputEvent.PRESS:
+            //     this.eventEmitter.off(GameInputEvent.PRESS, cb)
+            //     break
         }
     }
 

@@ -344,7 +344,9 @@ export class GridRenderer {
 
         // press preview
         cellRenderer.on(GameInputEvent.PRESS, () => {
-            if (this.game.isGameEnd) return
+            if (this.game.isGameEnd) {
+                return
+            }
 
             this.game.pressPreview({ x, y }).forEach((pos) => {
                 this.renderCell(this.cellRenderers[pos.y][pos.x], { isPressed: true })
