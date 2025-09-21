@@ -1,69 +1,56 @@
-# React + TypeScript + Vite
+# Minesweeper
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A Minesweeper game built with React, TypeScript, and Vite. Deployable to Cloudflare Workers.
 
-Currently, two official plugins are available:
+<img src="./src/assets/screenshot.png" alt="drawing" width="300"/>
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Live Demo
 
-## Expanding the ESLint configuration
+https://minesweeper.nicktgn.dev/
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Development
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+To run the game locally:
 
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+To deploy to Cloudflare Workers:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run deploy
 ```
+
+For visual testing/debugging purposes, you can set the `VITE_DEBUG_GRID` environment variable to `true` in `.env` file to show the second grid with all cells open.
+
+## Game Rules & Features
+
+#### Rules:
+- The first square the user clicks must never be a mine.
+- Clicking a mine ends the game and reveals all mines. Clicking a safe square reveals it; if it has adjacent mines, it displays their count; otherwise, it automatically reveals neighboring squares.
+- Right clicking (long press on touch screen) on a square puts a flag on it. The flagged square can’t be opened. Pressing flagged square again removes the flag.
+- "Chording": if the number in a square is equal to the number of squares touching that square that are flagged, double clicking on the number opens up all remaining squares around the number.
+- The game ends when all safe squares are revealed or when a mine is clicked or "chorded"
+
+#### UI:
+- UI displays remaining flags to set and elapsed time (in seconds)
+- Smiley button resets the game; face changes based on game state
+
+
+## TODO:
+- [x] Basic game logic
+- [x] Basic UI
+- [x] Menu screen with difficulty selection
+- [x] Deploy to Cloudflare Workers
+- [x] Mouse and touch input
+- [ ] Better test coverage
+- [ ] Add CI/CD pipeline
+- [ ] Add e2e tests
+- [ ] Add custom difficulty levels
+- [ ] Add more theming options
+- [ ] Use media queries to adjust layout for mobile screens as well as landscape orientation
+- [ ] Keep and display stats across sessions
+- [ ] Add more polish the UI and create reusable component system
+    - [ ] Add storybook

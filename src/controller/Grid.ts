@@ -1,4 +1,11 @@
-import type { ICell, IGrid, Vector2, GridConfig, FailState } from '../model'
+import type {
+    ICell,
+    IGrid,
+    Vector2,
+    GridConfig,
+    FailState
+} from '../model'
+import { mineCount } from '../model'
 
 class Grid implements IGrid {
     private _width: number
@@ -24,7 +31,7 @@ class Grid implements IGrid {
         this._height = gridConfig.height
         this._mineRatio = gridConfig.mineRatio
         this._cellCount = this._width * this._height
-        this._mineCount = Math.floor(this._cellCount * this._mineRatio)
+        this._mineCount = mineCount(gridConfig)
 
         // generate cells
         this._cells = Array.from({ length: this._height }, (_, y) =>

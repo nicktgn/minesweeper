@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { padZeros } from '../utils'
 import { GameState } from '../model'
 import { useGameContext } from '../context/GameContext'
@@ -110,7 +110,7 @@ export default function GameUI() {
   }, [game, gameState, handleProgress, handleGameStateChange, handleGameTimerTick])
 
   return (
-    <div className="w-full max-w-[520px] select-none">
+    <div className="w-full select-none">
       {/* Panel frame to mimic classic bezel */}
       <div className={`
         rounded-md rounded-b-none bg-[#4f5962] p-2 border-b-0 border-2 border-[#2b333a]

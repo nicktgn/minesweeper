@@ -13,6 +13,10 @@ export type GameConfig = {
     grid: GridConfig
 }
 
+export const mineCount = (config: GridConfig) => {
+  return Math.round(config.width * config.height * config.mineRatio)
+}
+
 export type GridConfig = {
     width: number
     height: number
@@ -27,7 +31,7 @@ export const DifficultyMap: Record<DifficultyLevel, DifficultyLevelConfig> = {
     }
   },
   [DifficultyLevel.INTERMEDIATE]: {
-    name: 'Intermediate', 
+    name: 'Intermediate',
     config: {
       grid: { width: 16, height: 16, mineRatio: 0.16 }
     }
