@@ -113,10 +113,9 @@ export class GameInputEventEmitter {
             case GameInputEvent.CHORDING:
                 this.eventEmitter.on(GameInputEvent.CHORDING, cb)
                 break
-            // TODO: fix press visualization
-            // case GameInputEvent.PRESS:
-            //     this.eventEmitter.on(GameInputEvent.PRESS, cb)
-            //     break
+            case GameInputEvent.PRESS:
+                this.eventEmitter.on(GameInputEvent.PRESS, cb)
+                break
         }
     }
 
@@ -131,10 +130,9 @@ export class GameInputEventEmitter {
             case GameInputEvent.CHORDING:
                 this.eventEmitter.off(GameInputEvent.CHORDING, cb)
                 break
-            // TODO: fix press visualization
-            // case GameInputEvent.PRESS:
-            //     this.eventEmitter.off(GameInputEvent.PRESS, cb)
-            //     break
+            case GameInputEvent.PRESS:
+                this.eventEmitter.off(GameInputEvent.PRESS, cb)
+                break
         }
     }
 

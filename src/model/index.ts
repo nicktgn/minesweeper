@@ -18,6 +18,11 @@ export type FailState = {
     wrongFlagCells: ICell[]
 }
 
+export type PressPreview = {
+    isAllowed: boolean
+    previewCells: Vector2[]
+}
+
 export interface ICell {
     hasMine: boolean
     isOpened: boolean

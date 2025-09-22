@@ -149,7 +149,7 @@ class Grid implements IGrid {
 
     /**
      * chording - https://minesweeper.fandom.com/wiki/Chording
-     * @returns true if opened any cells, false if not; last mine ICell if opened any mines
+     * @returns true if opened any cells, false if not
      */
     revealAdjacentCells(pos: Vector2): boolean {
         const cell = this.getCell(pos)
@@ -160,8 +160,7 @@ class Grid implements IGrid {
         }
 
         // if number on cell doesn't match number of flags around, no chording
-        if (cell.adjacentMines == 0
-            || cell.adjacentMines !== this.countAdjacentFlags(pos.x, pos.y)) {
+        if (!this.isChordingAllowed(cell)) {
             return false
         }
 
@@ -231,6 +230,11 @@ class Grid implements IGrid {
                     .filter((cell) => !cell.hasMine),
             })
         }
+    }
+
+    private isChordingAllowed(cell: ICell) {
+        return cell.adjacentMines > 0
+            && cell.adjacentMines == this.countAdjacentFlags(cell.pos.x, cell.pos.y)
     }
 
     private resetCell(cell: ICell) {

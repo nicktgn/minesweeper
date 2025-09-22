@@ -71,6 +71,8 @@ export class GridRenderer {
     private options: GridRendererOptions
     private isInitialized = false
 
+    private unpressFn: (() => void) | null = null
+
     private readonly CELL_SIZE = 24
     private readonly BORDER_WIDTH = 2
 
@@ -348,6 +350,15 @@ export class GridRenderer {
                 return
             }
 
+            const cellList = this.game.pressPreview({ x, y })
+
+            // prep unpress function
+            this.unpressFn = () => {
+                cellList.forEach((pos) => {
+                    this.renderCell(this.cellRenderers[pos.y][pos.x])
+                })
+            }
+            // do the press
             this.game.pressPreview({ x, y }).forEach((pos) => {
                 this.renderCell(this.cellRenderers[pos.y][pos.x], { isPressed: true })
             })
@@ -357,14 +368,28 @@ export class GridRenderer {
             if (this.game.isGameEnd){
                 return
             }
-            this.game.openCell({ x, y })
+            const success = this.game.openCell({ x, y })
+
+            // resolve press preview
+            if (success) {
+                this.unpressFn = null
+            } else {
+                this.unpressFn?.()
+            }
         })
 
         cellRenderer.on(GameInputEvent.CHORDING, () => {
             if (this.game.isGameEnd){
                 return
             }
-            this.game.revealAdjacentCells({ x, y })
+            const success = this.game.revealAdjacentCells({ x, y })
+
+            // resolve press preview
+            if (success) {
+                this.unpressFn = null
+            } else {
+                this.unpressFn?.()
+            }
         })
 
         cellRenderer.on(GameInputEvent.FLAG, () => {

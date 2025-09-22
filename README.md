@@ -37,6 +37,7 @@ For visual testing/debugging purposes, you can set the `VITE_DEBUG_GRID` environ
 #### UI:
 - UI displays remaining flags to set and elapsed time (in seconds)
 - Smiley button resets the game; face changes based on game state
+- While pressing (mouse down) on the cell, it shows a preview of which cells would be revealed for both single cell opening and for chording
 
 ## Architecture
 
@@ -52,7 +53,7 @@ For visual testing/debugging purposes, you can set the `VITE_DEBUG_GRID` environ
 - [x] Menu screen with difficulty selection
 - [x] Deploy to Cloudflare Workers
 - [x] Mouse and touch input
-- [ ] (Bug) Fix press preview visualization (on mouse down) for single cell and for chording
+- [X] (Bug) Fix press preview visualization (on mouse down) for single cell and for chording
 - [ ] Better test coverage
 - [ ] Add CI/CD pipeline
 - [ ] Add e2e tests
